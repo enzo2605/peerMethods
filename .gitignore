@@ -50,3 +50,17 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+# Executables
+xccblat1
+xccblat2
+xccblat3
+xdcblat1
+xdcblat2
+xdcblat3
+xscblat1
+xscblat2
+xscblat3
+xzcblat1
+xzcblat2
+xzcblat3
