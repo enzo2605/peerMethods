@@ -53,8 +53,8 @@ void initReturnStruct(return_values *rv);
 int saveResultsInFile(const char* fileName, return_values result);
 
 /**
- * @brief Build the matrix L.
- * This is an helping function that builds the matrix L.
+ * @brief Spatial semi-discretization of the PDE (Partial Differential Equation).
+ * Build the matrix L to perform the spatial semi-discretization of the ODE.
  * @param[out] L returning pointer to the matrix
  * @param[in] LSize return the size of the matrix
  * @param[in] Delta_x the value of the delta
@@ -73,32 +73,31 @@ void defineLMatrix(double **L, int *LSize, double Delta_x);
 double *Sherratt(const double *y0, int y0Size, const double *L, int Lsize, int *sherrattSize);
 
 /**
- * @brief Implicit fourth order method to solving ODE (Ordinary Differential Equation).
- * @param[in] h number of conditions to achieve the solution
+ * @brief Returns the numerical approximation of the solution of the equation at the
+ * next time step, given the current one, by using Runge Kutta 4th order method.
+ * @param[in] h constant grid spacing (the space between the values of the discrete grid)
  * @param[in] t0 starting time
- * @param[in] y0 pointer to the y0 vector
+ * @param[in] y0 vector representing value of the y function in y(t0)
  * @param[in] y0Size size of the y0 vector
  * @param[in] L pointer to the matrix L
  * @param[in] LSize size of the matrix
- * @param[out] ySize size of the result vector
- * @return a pointer to the y resulting vector.
+ * @param[out] ySize size of the resulting vector
+ * @return a vector that approximates the value of the solution at the next time step t0 + h, y(t0 + h)
 */
 double *RungeKutta4th(double h, double t0, const double *y0, int y0Size, const double *L, int Lsize, int *ySize);
 
 /**
- * @brief Compute the PDE (Partial Differential Equation) using the MOL (Method Of Lines).
- * The function computes the PDE (Partial Differential Equation) using MOL (Method Of Lines) and deriving 
- * a large system of ODE (Ordinary Differential Equation). Than, it solves the ODE system using the Runge
- * Kutta method of the fourth order.
- * @param[in] N the size of the temporal grid
- * @param[in] t_span an array representing the temporal grid itself
- * @param[in] t_span_size the spatial dimension of the temporal grid
- * @param[in] L pointer to the matrix L
+ * @brief Time discretization using peer methods.
+ * The method solve a large system of ODEs (Ordinary Differential Equations) by using peer methods.
+ * @param[in] N the size of the time grid
+ * @param[in] t_span an array representing the time grid itself
+ * @param[in] t_span_size the spatial dimension of the time grid
+ * @param[in] L pointer to the matrix L deriving from the spatial semi-discretization
  * @param[in] LSize size of the matrix
- * @param[in] y0 pointer to the y0 vector
+ * @param[in] y0 pointer to the y0 vector, containing the initial conditions
  * @param[in] y0Size size of the y0 vector
  * @param[out] collect_result size of the result vector
- * @return a pointer to the y resulting vector.
+ * @return a struct containing.
 */
 void fPeerClassic_twoStages(int N, double *t_span, int t_span_size, const double *L, int Lsize, const double *y0, int y0_size, return_values *collect_result);
 

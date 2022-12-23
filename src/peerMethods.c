@@ -174,7 +174,6 @@ double *RungeKutta4th(double h, double t0, const double *y0, int y0Size, const d
     //saveVectorsInFile("../parallel/good.txt", 4, fY1, y0Size, fY2, y0Size, fY3, y0Size, fY4, y0Size, (void *)0);
     //exit(0);
 
-
     cblas_dscal(fY1_size, h * b[0], fY1, 1);
     cblas_dscal(fY2_size, h * b[1], fY2, 1);
     cblas_dscal(fY3_size, h * b[2], fY3, 1);
@@ -193,9 +192,9 @@ double *RungeKutta4th(double h, double t0, const double *y0, int y0Size, const d
 }
 
 void fPeerClassic_twoStages(int N, double *t_span, int t_span_size, const double *L, int Lsize, const double *y0, int y0_size, return_values *collect_result) {
-    /******************************* 
-     * Fixing method coefficients 
-     * ****************************/
+    /*****************************************************************
+     *              Fixing method coefficients 
+     * ***************************************************************/
     double b11 = 0.0f, b21 = 0.0f, b12 = 1.0f, b22 = 1.0f, c1 = 0.0f, c2 = 1.0f, r21 = 0.0f;
 
     double a11 = -((b11 - 2 * b11 * c1 - pow(c1, 2) + b11 * pow(c1, 2)) / (2 * (-1 + c1)));
@@ -222,25 +221,23 @@ void fPeerClassic_twoStages(int N, double *t_span, int t_span_size, const double
     initMatrixByRowWithValuesFromVector(R, STAGES, STAGES, tempR, STAGES * STAGES);
     //printDMatrix(R, STAGES, STAGES, "R");
 
-    /******************************* 
-     *  Compute the solution
-     * ****************************/
-    double h = (t_span[1] - t_span[0]) / N;
-    double *t = linspace(t_span[0], t_span[1], N + 1);
+    /******************************************************************* 
+     *                  Compute the solution
+     * ****************************************************************/
+    double h = (t_span[1] - t_span[0]) / N; // Time step size
+    double *t = linspace(t_span[0], t_span[1], N + 1); // Time discretization
     int t_size = N + 1;
-    int n = 1;
-
+    int n = 1; // Initial step
     int s = STAGES; // Number of stages
     int d1 = y0_size; // Dimension of the problem
     int Y_rows = s * d1, Y_cols = N;
-    double *Y = zerosMatrixD(Y_rows, Y_cols);
-    //fprintf(stdout, "\nh: %lf\ns: %d\nd1: %d\n", h, s, d1);
-    //printDVector(t, N + 1, "t");
-    //printDMatrix(Y, Y_rows, Y_cols, "Y");
+    double *Y = zerosMatrixD(Y_rows, Y_cols); // Approximation of the advancing solution at every step
 
-    /************************************************
-     * Runge-Kutta of order four to initialize stages 
-     * **********************************************/
+    /*************************************************************************
+     * Runge-Kutta of order four to initialize stages Y_{0, i} that guarantees 
+     * the peer method maintains the same order of accuracy when computing next 
+     * values Y_{n,i}
+     * ***********************************************************************/
     double *FYiRK;
     int FYiRK_size;
     for (int i = 0; i < s; i++) {
@@ -255,22 +252,31 @@ void fPeerClassic_twoStages(int N, double *t_span, int t_span_size, const double
     //saveMatrixInFile("../parallel/good.txt", Y, Y_rows, Y_cols);
 
     int y_rows = d1, y_cols = N + 1;
-    double *y = zerosMatrixD(y_rows, y_cols);
-    // Fill the firt column of the matrix y
+    double *y = zerosMatrixD(y_rows, y_cols); // Advancing solution
+    /*************************************************************************
+     * Solution at t0+cs*h=t0+h (cs=0) that is u10_time
+     * ***********************************************************************/
     for (int k = 0; k < d1; k++) {
         y[0 * y_rows + k] = y0[k];
     }
-    // Fill the second column of the matrix y
+    /*************************************************************************
+     * Solution at t0+cs*h=t0+h (cs=1) that is the second stage computed thanks
+     * Runge-Kutta 4th order explicit method, that guarantees the peer method
+     * maintains the same order of accuracy when computing next values Y_{n,i}
+     * ***********************************************************************/
     for (int k = 0; k < d1; k++) {
         y[(n) * y_rows + k] = Y[(n - 1) * Y_rows + ((s - 1) * d1 + k)];
     }
     //printDMatrix(y, y_rows, y_cols, "y");
     //saveMatrixInFile("../parallel/good.txt", y, y_rows, y_cols);
 
+    /*************************************************************************
+     * Compute the F(Y^{[n]}) function that will become F(Y^{[n-1]}) and 
+     * will be used in the next step
+    * ***********************************************************************/
     int Fnm1_size = s * d1;
     double *Fnm1 = zerosD(Fnm1_size);
     double *Yi = zerosD(d1);
-
     for (int i = 0; i < s; i++) {
         //printDMatrix(Y, Y_rows, Y_cols, "Y");
         for (int k = 0; k < d1; k++) {
@@ -289,8 +295,13 @@ void fPeerClassic_twoStages(int N, double *t_span, int t_span_size, const double
     //printDVector(Fnm1, Fnm1_size, "Fnm1");
     //saveVectorsInFile("../parallel/good.txt", 2, Fnm1, Fnm1_size, Yi, d1, (void *)0);
 
+    /*************************************************************************
+     *                          Main loop
+    * ***********************************************************************/
     for (n = 1; n < N; n++) {
-        //fprintf(stdout, "\nn: %d \n", n);
+        /*************************************************************************
+        *                   Apply peer methods equation
+        * ***********************************************************************/
         for (int i = 0; i < s; i++) {
             for (int k = 0; k < d1; k++) {
                 for (int j = 0; j < s; j++) {
@@ -300,6 +311,10 @@ void fPeerClassic_twoStages(int N, double *t_span, int t_span_size, const double
         }
         //printDMatrix(Y, Y_rows, Y_cols, "Y");
 
+        /*************************************************************************
+        * Compute the F(Y^{[n]}) function that will become F(Y^{[n-1]}) and 
+        * will be used in the next step
+        * ***********************************************************************/
         Fnm1 = zerosD(Fnm1_size);
         Yi = zerosD(d1);
         for (int i = 0; i < s; i++) {
@@ -316,6 +331,9 @@ void fPeerClassic_twoStages(int N, double *t_span, int t_span_size, const double
         //printDVector(Yi, d1, "Yi");
         //printDVector(Fnm1, Fnm1_size, "Fnm1");
 
+        /*************************************************************************
+        *           Solution at t0+cs*h=t0+h (cs=1) for the step n
+        * ***********************************************************************/
         for (int k = 0; k < d1; k++) {
             y[(n + 1) * y_rows + k] = Y[(n) * Y_rows + ((s - 1) * d1 + k)];
         }
@@ -325,11 +343,12 @@ void fPeerClassic_twoStages(int N, double *t_span, int t_span_size, const double
     //printDVector(Yi, d1, "Yi");
     //printDVector(Fnm1, Fnm1_size, "Fnm1");
 
-    //fprintf(stdout, "Here\n");
+    /*************************************************************************
+    *                   Save the ODE solution into yT
+    * ***********************************************************************/
     double *yT = zerosD(d1);
     int yT_size = d1;
     for (int i = 0; i < d1; i++) {
-        //fprintf(stdout, "y[(N) * y_cols + i]: %f\n", y[(N) * y_rows + i]);
         yT[i] = y[(N) * y_rows + i];
     }
     //printDVector(yT, yT_size, "yT");
