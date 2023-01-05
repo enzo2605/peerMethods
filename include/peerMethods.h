@@ -21,14 +21,14 @@ extern "C" {
 #define STAGES 2
 
 /* Model parameters declared as constants */
-#define a  1.5 
+#define a 1.5 
 #define B1 0.45 
 #define B2 0.3611 
-#define F  0.802 
-#define H  0.802 
-#define S  0.0002 
-#define d  500 
-#define D  0.802
+#define F 0.802 
+#define H 0.802 
+#define S 0.0002 
+#define d 500 
+#define D 0.802
 
 /* Variable that need to be set in the calling method. */
 extern int M;

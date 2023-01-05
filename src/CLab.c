@@ -19,10 +19,10 @@ double *intervalDiscretization(double first, double last, double step, int *N) {
 double *eyeD(int N) {
     // Allocate the matrix, rembering that we need to allocate
     // the matrix by columns and start from 1
-    double *a = (double *)Calloc(N * N, sizeof(double));
+    double *array = (double *)Calloc(N * N, sizeof(double));
     for (int i = 0; i < N; i++) {
         for (int j = 0; j < N; j++) {
-            a[i * N + j] = (i == j) ? 1 : 0;
+            array[i * N + j] = (i == j) ? 1 : 0;
         }
     }
     return a;
@@ -30,26 +30,26 @@ double *eyeD(int N) {
 
 double *onesD(int N) {
     // Allocate the array using calloc
-    double *a = (double *)Calloc(N, sizeof(double));
+    double *array = (double *)Calloc(N, sizeof(double));
     // Fill the array
     for (int i = 0; i < N; i++) {
-        *(a + i) = 1.0f;
+        *(array + i) = 1.0f;
     }
-    return a;
+    return array;
 }
 
 double *zerosD(int N) {
     // Allocate the array using calloc and initialize automatically
     // every element with 0
-    double *a = (double *)Calloc(N, sizeof(double));
-    return a;
+    double *array = (double *)Calloc(N, sizeof(double));
+    return array;
 }
 
 double *zerosMatrixD(int M, int N) {
     // Allocate the array using calloc and initialize automatically
     // every element with 0
-    double *a = (double *)Calloc(M * N, sizeof(double));
-    return a;
+    double *array = (double *)Calloc(M * N, sizeof(double));
+    return array;
 }
 
 double *diagD(double *vector, int size, int k, int *matrix_size) {
