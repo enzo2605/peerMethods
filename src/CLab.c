@@ -25,7 +25,7 @@ double *eyeD(int N) {
             array[i * N + j] = (i == j) ? 1 : 0;
         }
     }
-    return a;
+    return array;
 }
 
 double *onesD(int N) {
