@@ -3,7 +3,7 @@
  * @author Vincenzo Iannucci
  * @brief The library provides an implementation for the main function for solving peer method.
  * @version 0.1
- * @date 2022-11-29
+ * @date 01-05-2023 (MM-DD-YYYY)
  * @dir peerMethods/include
  * 
  * @copyright Copyright (c) 2022
@@ -20,14 +20,28 @@ extern "C" {
 /* Number of stages. */
 #define STAGES 2
 
+/* Model parameters declared as constants */
+#define a  1.5 
+#define B1 0.45 
+#define B2 0.3611 
+#define F  0.802 
+#define H  0.802 
+#define S  0.0002 
+#define d  500 
+#define D  0.802
+
 /* Variable that need to be set in the calling method. */
-extern double a, B1, B2, F, H, S, d, D, L;
 extern int M;
 
-/*********************************************************************************
- * This struct has been created with the only purpose to return the value
- * obtained by the fPeerMethod function.
- ********************************************************************************/
+/** @struct return_values
+ *  @brief This struct contains the returning values from peer methods function.
+ *  @var foreignstruct::yT 
+ *  Member 'yT' represents the final solution of the PDE system.
+ *  @var foreignstruct::y
+ *  Member 'y'contains the solution at each stage of the PDE system.
+ *  @var foreignstruct::t
+ *  Member 't' represents the discretization of the temporal grid.
+ */
 typedef struct {
     double *yT;
     int yT_size;
