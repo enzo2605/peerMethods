@@ -3,7 +3,6 @@
 #include <string.h>
 #include <math.h>
 #include <float.h>
-#include "cblas.h"
 #include "peerMethods.h"
 
 void initReturnStruct(return_values *rv) {
@@ -49,24 +48,28 @@ int saveResultsInFile(const char* fileName, return_values result) {
 void defineLMatrix(double **L, int *LSize, double Delta_x) {
     // Calculate Ldiff
     int sizeTempDiagOne, sizeTempDiagMinusOne;
+    
     // Multiply identity matrix by a scalar -2.0f
     double *eyeM = eyeD(M);
-    cblas_dscal(M * M, -2.0f, eyeM, 1);
+    peerMethodsDscal(M * M, -2.0f, eyeM, 1);
 
     double *onesVector = onesD(M - 1);
     double *tempDiagOne = diagD(onesVector, M - 1, 1, &sizeTempDiagOne);
     double *tempDiagMinusOne = diagD(onesVector, M - 1, -1, &sizeTempDiagMinusOne);
+
     // Sum eyeM with tempDiagOne
-    cblas_daxpy(M * M, 1.0f, eyeM, 1, tempDiagOne, 1);
+    peerMethodsDaxpy(M * M, 1.0f, eyeM, 1, tempDiagOne, 1);
     // Sum the resulting matrix with tempDiagMinusOne
-    cblas_daxpy(M * M, 1.0f, tempDiagOne, 1, tempDiagMinusOne, 1);
+    peerMethodsDaxpy(M * M, 1.0f, tempDiagOne, 1, tempDiagMinusOne, 1);
 
     // Copy data to Ldiff matrix
     double *Ldiff = (double *)Calloc(M * M, sizeof(double));
     memcpy(Ldiff, tempDiagMinusOne, M * M * sizeof(double));
+
     // Multiply Ldiff by scalar alpha
     double alpha = 1.0f / (Delta_x * Delta_x);
-    cblas_dscal(M * M, alpha, Ldiff, 1);
+    peerMethodsDscal(M * M, alpha, Ldiff, 1);
+
     // Using periodic boundary conditions, the matrix LDiff must actually
     // be slightly modified, setting LDiff (M,1) = LDiff (1,M) = 1 / Delta_x^2
     Ldiff[M - 1] = alpha;
@@ -75,12 +78,12 @@ void defineLMatrix(double **L, int *LSize, double Delta_x) {
     // Define DLdiff
     double *DLdiff = (double *)Calloc(M * M, sizeof(double));
     memcpy(DLdiff, Ldiff, M * M * sizeof(double));
-    cblas_dscal(M * M, D, DLdiff, 1);
+    peerMethodsDscal(M * M, D, DLdiff, 1);
 
     // Define dLdiff
     double *dLdiff = (double *)Calloc(M * M, sizeof(double));
     memcpy(dLdiff, Ldiff, M * M * sizeof(double));
-    cblas_dscal(M * M, d, dLdiff, 1);
+    peerMethodsDscal(M * M, d, dLdiff, 1);
 
     // Define matrix L
     *L = threeBlockDiagD(M, Ldiff, DLdiff, dLdiff, LSize);
@@ -108,16 +111,12 @@ double *Sherratt(const double *y0, int y0Size, const double *L, int Lsize, int *
         fun[i + 2 * M] = a - W[i] - W[i] * (U[i] + V[i]) * (U[i] + H * V[i]);
     }
 
-    //printf("H: %f\nB1: %f\nS: %f\nF: %f\nB2: %f\na: %f\n", H, B1, S, F, B2, a);
-    //saveVectorsInFile("../parallel/good.txt", 1, fun, y0Size, (void *)0);
-    //exit(0);
-
     // Matrix by vector product
     double *Ly = (double *)Calloc(newSize, sizeof(double));
-    cblas_dgemv(CblasRowMajor, CblasNoTrans, Lsize, Lsize, 1, L, Lsize, y0, 1, 0, Ly, 1);
+    peerMethodsDgemv(Lsize, Lsize, 1, L, Lsize, y0, 1, Ly, 1);
 
     // Punctual sum of two vectors
-    cblas_daxpy(Lsize, 1.0f, fun, 1, Ly, 1);
+    peerMethodsDaxpy(Lsize, 1.0f, fun, 1, Ly, 1);
     *sherrattSize = Lsize;
 
     // Free all the useless memory allocated
@@ -127,7 +126,6 @@ double *Sherratt(const double *y0, int y0Size, const double *L, int Lsize, int *
 }
 
 double *RungeKutta4th(double h, double t0, const double *y0, int y0Size, const double *L, int Lsize, int *ySize) {
-    double c[4] = { 0.0f, 1.0f / 2.0f, 1.0f / 2.0f, 1.0f };
     double A[4][4] = { 
                         { 0.0f, 0.0f, 0.0f, 0.0f }, 
                         { 1.0f / 2.0f, 0.0f, 0.0f, 0.0f }, 
@@ -138,55 +136,50 @@ double *RungeKutta4th(double h, double t0, const double *y0, int y0Size, const d
 
     // Compute Y1
     const double *Y1 = y0;
-    //printDVector(Y1, y0Size, "Y1");
 
-    // Compute Y2
+    // Compute f(Y1)
     int fY1_size;
     double *fY1 = Sherratt(Y1, y0Size, L, Lsize, &fY1_size);
+    
+    // Compute Y2
     double *Y2 = (double *)Calloc(fY1_size, sizeof(double));
     memcpy(Y2, fY1, fY1_size * sizeof(double));
-    cblas_dscal(fY1_size, h * A[1][0], Y2, 1);
-    cblas_daxpy(fY1_size, 1.0f, y0, 1, Y2, 1);
-    //printDVector(Y2, y0Size, "Y2");
+    peerMethodsDscal(fY1_size, h * A[1][0], Y2, 1);
+    peerMethodsDaxpy(fY1_size, 1.0f, y0, 1, Y2, 1);
 
-    // Compute Y3
+    // Compute f(Y2)
     int fY2_size;
     double *fY2 = Sherratt(Y2, y0Size, L, Lsize, &fY2_size);
+
+    // Compute Y3
     double *Y3 = (double *)Calloc(fY2_size, sizeof(double));
     memcpy(Y3, fY2, fY2_size * sizeof(double));
-    cblas_dscal(fY2_size, h * A[2][1], Y3, 1);
-    cblas_daxpy(fY2_size, 1.0f, y0, 1, Y3, 1);
-    //printDVector(Y3, y0Size, "Y3");
+    peerMethodsDscal(fY2_size, h * A[2][1], Y3, 1);
+    peerMethodsDaxpy(fY2_size, 1.0f, y0, 1, Y3, 1);
 
-    // Compute Y4
+    // Compute f(Y3)
     int fY3_size;
     double *fY3 = Sherratt(Y3, y0Size, L, Lsize, &fY3_size);
+
+    // Compute Y4
     double *Y4 = (double *)Calloc(fY3_size, sizeof(double));
     memcpy(Y4, fY3, fY3_size * sizeof(double));
-    cblas_dscal(fY3_size, h * A[3][2], Y4, 1);
-    cblas_daxpy(fY3_size, 1.0f, y0, 1, Y4, 1);
-    //printDVector(Y4, y0Size, "Y4");
+    peerMethodsDscal(fY3_size, h * A[3][2], Y4, 1);
+    peerMethodsDaxpy(fY3_size, 1.0f, y0, 1, Y4, 1);
 
-    // Compute y
+    // Compute f(Y4)
     int fY4_size;
     double *fY4;
     fY4 = Sherratt(Y4, y0Size, L, Lsize, &fY4_size);
-    //saveVectorsInFile("../parallel/good.txt", 4, fY1, y0Size, fY2, y0Size, fY3, y0Size, fY4, y0Size, (void *)0);
-    //exit(0);
 
-    cblas_dscal(fY1_size, h * b[0], fY1, 1);
-    cblas_dscal(fY2_size, h * b[1], fY2, 1);
-    cblas_dscal(fY3_size, h * b[2], fY3, 1);
-    cblas_dscal(fY4_size, h * b[3], fY4, 1);
-
+    // Compute final result
     double *y = (double *)Calloc(y0Size, sizeof(double));
-    cblas_daxpy(y0Size, 1.0f, y0, 1, y, 1);
-    cblas_daxpy(y0Size, 1.0f, fY1, 1, y, 1);
-    cblas_daxpy(y0Size, 1.0f, fY2, 1, y, 1);
-    cblas_daxpy(y0Size, 1.0f, fY3, 1, y, 1);
-    cblas_daxpy(y0Size, 1.0f, fY4, 1, y, 1);
     *ySize = y0Size;
-    //printDVector(y, *ySize, "y");
+    peerMethodsDaxpy(y0Size, h * b[0], fY1, 1, y, 1);
+    peerMethodsDaxpy(y0Size, h * b[1], fY2, 1, y, 1);
+    peerMethodsDaxpy(y0Size, h * b[2], fY3, 1, y, 1);
+    peerMethodsDaxpy(y0Size, h * b[3], fY4, 1, y, 1);
+    peerMethodsDaxpy(y0Size, 1.0, y0, 1, y, 1);
 
     return y;
 }
@@ -201,25 +194,20 @@ void fPeerClassic_twoStages(int N, double *t_span, int t_span_size, const double
     double a12 = -((b11 + 2 * c1 - 2 * b11 * c1 - pow(c1, 2) + b11 * pow(c1, 2)) / (2 * (-1 + c1)));
     double a21 = -((-1 + b21 - 2 * b21 * c1 + b21 * pow(c1, 2) + 2 * c1 * r21) / (2 * (-1 + c1)));
     double a22 = -((3 + b21 - 2 * c1 - 2 * b21 * c1 + b21 * pow(c1, 2) - 2 * r21) / (2 * (-1 + c1)));
-    //fprintf(stdout, "a11: %f\na12: %f\na21: %f\na22: %f\n", a11, a12, a21, a22);
 
     double c[STAGES] = { c1, c2 };
-    //printDVector(c, STAGES, "c");
 
     double *A = (double *)Calloc(STAGES * STAGES, sizeof(double));
     double tempA[STAGES * STAGES] = { a11, a12, a21, a22 };
     initMatrixByRowWithValuesFromVector(A, STAGES, STAGES, tempA, STAGES * STAGES);
-    //printDMatrix(A, STAGES, STAGES, "A");
 
     double *B = (double *)Calloc(STAGES * STAGES, sizeof(double));
     double tempB[STAGES * STAGES] = { b11, b12, b21, b22 };
     initMatrixByRowWithValuesFromVector(B, STAGES, STAGES, tempB, STAGES * STAGES);
-    //printDMatrix(B, STAGES, STAGES, "B");
 
     double *R = (double *)Calloc(STAGES * STAGES, sizeof(double));
     double tempR[STAGES * STAGES] = { 0.0f, 0.0f, r21, 0.0f };
     initMatrixByRowWithValuesFromVector(R, STAGES, STAGES, tempR, STAGES * STAGES);
-    //printDMatrix(R, STAGES, STAGES, "R");
 
     /******************************************************************* 
      *                  Compute the solution
@@ -247,9 +235,6 @@ void fPeerClassic_twoStages(int N, double *t_span, int t_span_size, const double
             Y[(n - 1) * Y_rows + (i * d1 + k)] = FYiRK[k];
         }
     }
-    //printDMatrix(Y, Y_rows, Y_cols, "Y");
-    //printDVector(FYiRK, FYiRK_size, "FYiRK");
-    //saveMatrixInFile("../parallel/good.txt", Y, Y_rows, Y_cols);
 
     int y_rows = d1, y_cols = N + 1;
     double *y = zerosMatrixD(y_rows, y_cols); // Advancing solution
@@ -267,8 +252,6 @@ void fPeerClassic_twoStages(int N, double *t_span, int t_span_size, const double
     for (int k = 0; k < d1; k++) {
         y[(n) * y_rows + k] = Y[(n - 1) * Y_rows + ((s - 1) * d1 + k)];
     }
-    //printDMatrix(y, y_rows, y_cols, "y");
-    //saveMatrixInFile("../parallel/good.txt", y, y_rows, y_cols);
 
     /*************************************************************************
      * Compute the F(Y^{[n]}) function that will become F(Y^{[n-1]}) and 
@@ -278,12 +261,8 @@ void fPeerClassic_twoStages(int N, double *t_span, int t_span_size, const double
     double *Fnm1 = zerosD(Fnm1_size);
     double *Yi = zerosD(d1);
     for (int i = 0; i < s; i++) {
-        //printDMatrix(Y, Y_rows, Y_cols, "Y");
         for (int k = 0; k < d1; k++) {
-            //printf("d1: %d\n", d1);
             Yi[k] = Y[(n - 1) * Y_rows + (i * d1 + k)];
-            //int x = (n) * Y_rows + (i * d1 + k);
-            //printf("Y[%d]: %lf\n", x, Y[x]);
         }
         int FYi_size;
         double *FYi = Sherratt(Yi, d1, L, Lsize, &FYi_size);
@@ -291,9 +270,6 @@ void fPeerClassic_twoStages(int N, double *t_span, int t_span_size, const double
             Fnm1[i * d1 + k] = FYi[k];
         }
     }
-    //printDVector(Yi, d1, "Yi");
-    //printDVector(Fnm1, Fnm1_size, "Fnm1");
-    //saveVectorsInFile("../parallel/good.txt", 2, Fnm1, Fnm1_size, Yi, d1, (void *)0);
 
     /*************************************************************************
      *                          Main loop
@@ -309,7 +285,6 @@ void fPeerClassic_twoStages(int N, double *t_span, int t_span_size, const double
                 }
             }
         }
-        //printDMatrix(Y, Y_rows, Y_cols, "Y");
 
         /*************************************************************************
         * Compute the F(Y^{[n]}) function that will become F(Y^{[n-1]}) and 
@@ -327,9 +302,6 @@ void fPeerClassic_twoStages(int N, double *t_span, int t_span_size, const double
                 Fnm1[i * d1 + k] = FYi[k];
             }
         }
-        //printf("\nn: %d", n);
-        //printDVector(Yi, d1, "Yi");
-        //printDVector(Fnm1, Fnm1_size, "Fnm1");
 
         /*************************************************************************
         *           Solution at t0+cs*h=t0+h (cs=1) for the step n
@@ -338,10 +310,6 @@ void fPeerClassic_twoStages(int N, double *t_span, int t_span_size, const double
             y[(n + 1) * y_rows + k] = Y[(n) * Y_rows + ((s - 1) * d1 + k)];
         }
     }
-    //printDMatrix(Y, Y_rows, Y_cols, "Y");
-    //printDMatrix(y, y_rows, y_cols, "y");
-    //printDVector(Yi, d1, "Yi");
-    //printDVector(Fnm1, Fnm1_size, "Fnm1");
 
     /*************************************************************************
     *                   Save the ODE solution into yT
@@ -351,7 +319,6 @@ void fPeerClassic_twoStages(int N, double *t_span, int t_span_size, const double
     for (int i = 0; i < d1; i++) {
         yT[i] = y[(N) * y_rows + i];
     }
-    //printDVector(yT, yT_size, "yT");
 
     // After all the calculation, collecting and return the results
     collect_result->y = y;

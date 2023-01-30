@@ -2,8 +2,8 @@
  * @file peerMethods.h
  * @author Vincenzo Iannucci
  * @brief The library provides an implementation for the main function for solving peer method.
- * @version 0.1
- * @date 01-05-2023 (MM-DD-YYYY)
+ * @version 0.2
+ * @date 01-30-2023 (MM-DD-YYYY)
  * @dir peerMethods/include
  * 
  * @copyright Copyright (c) 2022
@@ -189,6 +189,41 @@ void freeEverything(void *arg1, ...);
 /**********************************************************************************
  *                      MATLAB functions written in C
  **********************************************************************************/
+
+/**
+ * @brief Constant times a vector plus a vector.
+ * @param N number of elements in input vector(s)
+ * @param alpha scalar
+ * @param X double precision array
+ * @param incX storage spacing between elements of X
+ * @param Y double precision array
+ * @param incY storage spacing between elements of Y
+ */
+void peerMethodsDaxpy(const int N, const double alpha, const double *X, const int incX, double *Y, const int incY);
+
+/**
+ * @brief Scales a vector by a constant.
+ * @param N  number of elements in input vector(s)
+ * @param alpha scalar
+ * @param X double precision array
+ * @param incX storage spacing between elements of X
+ */
+void peerMethodsDscal(const int N, const double alpha, double *X, const int incX);
+
+/**
+ * @brief Performs matrix-vector operations y := y + alpha*A*x.
+ * @param M specifies the number of rows of the matrix A
+ * @param N specifies the number of columns of the matrix A
+ * @param alpha scalar
+ * @param A double precision array containing the matrix coefficients
+ * @param lda specifies the second dimension of A
+ * @param X double precision array containing the elements of the vector x
+ * @param incX storage spacing between elements of X
+ * @param Y double precision array resulting elements from matrix-vector multiplication
+ * @param incY storage spacing between elements of Y
+ */
+void peerMethodsDgemv(const int M, const int N, const double alpha, const double *A, const int lda, const double *X, 
+                      const int incX, double *Y, const int incY);
 
 /**
  * @brief Provide the discretization of an interval starting with first

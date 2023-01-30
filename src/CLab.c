@@ -2,6 +2,31 @@
 #include <string.h>
 #include "peerMethods.h"
 
+void peerMethodsDaxpy(const int N, const double alpha, const double *X, const int incX, double *Y, const int incY) {
+    for (int i = 0; i < N; i++) {
+        Y[i * incY] = alpha * X[i * incX] + Y[i * incY];
+    }
+}
+
+void peerMethodsDscal(const int N, const double alpha, double *X, const int incX) {
+    for (int i = 0; i < N; i++) {
+        X[i * incX] = alpha * X[i * incX];
+    }
+}
+
+void peerMethodsDgemv(const int M, const int N,
+                      const double alpha, const double *A, const int lda,
+                      const double *X, const int incX, 
+                      double *Y, const int incY) 
+{
+    for (int i = 0; i < M; i++) {
+        Y[i] = 0.0;
+        for (int j = 0; j < N; j++) {
+            Y[i * incY] += alpha * A[i * lda + j] * X[j * incX];
+        }
+    }
+}
+
 double *intervalDiscretization(double first, double last, double step, int *N) {
     // Number of elements
     int size = ((int)(last - first) / step) + 1;

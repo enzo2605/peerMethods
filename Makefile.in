@@ -7,8 +7,6 @@
 #-----------------------------------------------------------------------------
 
 CLIB = ../lib/libpeerMethods.so
-INCLUDE_DIRS = -I ../external_libs/CBLAS/include
-LINKED_LIB = -L ../external_libs/CBLAS/lib
 
 #-----------------------------------------------------------------------------
 # Compilers

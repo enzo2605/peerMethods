@@ -11,6 +11,7 @@
 void *Malloc(size_t size) {
     void *res = malloc(size);
     if (res == NULL) {
+        fprintf(stderr, "\nError: malloc() failed\n");
         perror("malloc");
         exit(1);
     }
@@ -20,6 +21,7 @@ void *Malloc(size_t size) {
 void *Calloc(size_t nmemb, size_t size) {
     void *res = calloc(nmemb, size);
     if (res == NULL) {
+        fprintf(stderr, "\nError: calloc() failed\n");
         perror("calloc");
         exit(1);
     }

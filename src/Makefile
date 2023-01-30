@@ -8,13 +8,13 @@ OBJECTS = CLab.o utilities.o peerMethods.o
 
 .PHONY: all
 
-all: cleaner lib clean
+all: cleanall lib clean
 
 lib: ${OBJECTS}
 	${CC} ${CFLAGS} ${ARCHFLAGS} -o ${CLIB} ${OBJECTS} -Wl,--no-whole-archive
 
 peerMethods.o: peerMethods.c
-	${CC} -I../include ${INCLUDE_DIRS} ${CFLAGS} -c $< ${LINKED_LIB} ${LIB_FLAGS}
+	${CC} -I../include ${CFLAGS} -c $< ${LIB_FLAGS}
 
 CLab.o: CLab.c
 	${CC} -I../include ${CFLAGS} -c $<
@@ -30,5 +30,5 @@ clean:
 rmlib:
 	rm -f ${CLIB}
 
-cleaner: clean rmlib
+cleanall: clean rmlib
 	rm -f *.out
